@@ -26,9 +26,9 @@ To install Strava Gear Updater, follow these steps:
 To use Strava Gear Updater, follow these steps:
 
 1. Configure your Strava API credentials in .env file.
-2. Run the updater script:
+2. Run the main script:
     ```sh
-    npm start
+    node ./main.js
     ```
 ## License
 This project is licensed under the MIT License.
