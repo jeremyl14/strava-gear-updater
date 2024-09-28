@@ -1,0 +1,20 @@
+{
+  "dependencies": {
+    "axios": "^1.7.7",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.20.0",
+    "open": "^10.1.0",
+    "postgres": "^3.4.4"
+  },
+  "name": "strava-gear-updater",
+  "version": "1.0.0",
+  "description": "# Subsection",
+  "main": "main.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
