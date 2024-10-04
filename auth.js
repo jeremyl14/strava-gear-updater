@@ -31,8 +31,10 @@ function saveTokens(accessToken, refreshToken) {
         }
         const accessTokenLine = `STRAVA_ACCESS_TOKEN=${accessToken}`;
         const refreshTokenLine = `STRAVA_REFRESH_TOKEN=${refreshToken}`;
+        const refreshTokenExpiryLine = `STRAVA_REFRESH_TOKEN_EXPIRY=${Date.now() + 6 * 30 * 24 * 60 * 60 * 1000}`; // Assuming 6 months expiry
         const accessTokenRegex = /^STRAVA_ACCESS_TOKEN=.*/m;
         const refreshTokenRegex = /^STRAVA_REFRESH_TOKEN=.*/m;
+        const refreshTokenExpiryRegex = /^STRAVA_REFRESH_TOKEN_EXPIRY=.*/m;
 
         if (accessTokenRegex.test(envContent)) {
             envContent = envContent.replace(accessTokenRegex, accessTokenLine);
@@ -44,6 +46,12 @@ function saveTokens(accessToken, refreshToken) {
             envContent = envContent.replace(refreshTokenRegex, refreshTokenLine);
         } else {
             envContent += `\n${refreshTokenLine}`;
+        }
+
+        if (refreshTokenExpiryRegex.test(envContent)) {
+            envContent = envContent.replace(refreshTokenExpiryRegex, refreshTokenExpiryLine);
+        } else {
+            envContent += `\n${refreshTokenExpiryLine}`;
         }
 
         fs.writeFileSync(envFilePath, envContent, 'utf8');
@@ -83,4 +91,4 @@ async function exchangeCodeForToken(authCode) {
     }
 }
 
-module.exports = { initiateOAuth, exchangeCodeForToken };
+module.exports = { initiateOAuth, exchangeCodeForToken , saveTokens};

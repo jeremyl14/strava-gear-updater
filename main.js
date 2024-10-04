@@ -2,8 +2,8 @@ require('dotenv').config();
 const express = require('express');
 const axios = require('axios');
 const fs = require('fs');
-const { initiateOAuth, exchangeCodeForToken } = require('./auth');
-const { processActivities } = require('./activities'); // Import processActivities
+const { initiateOAuth, exchangeCodeForToken, saveTokens } = require('./auth');
+const { processActivities } = require('./activities');
 const app = express();
 const port = 3000;
 
@@ -11,72 +11,12 @@ let accessToken = process.env.STRAVA_ACCESS_TOKEN;
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
 
-// Function to save tokens to the .env file (unchanged)
-function saveTokens(accessToken, refreshToken, expiresAt) {
-    const envFilePath = '.env';
-    try {
-        let envContent = fs.existsSync(envFilePath) ? fs.readFileSync(envFilePath, 'utf8') : '';
-        const accessTokenLine = `STRAVA_ACCESS_TOKEN=${accessToken}`;
-        const refreshTokenLine = `STRAVA_REFRESH_TOKEN=${refreshToken}`;
-        const expiresAtLine = `STRAVA_TOKEN_EXPIRES_AT=${expiresAt}`;
-        const tokenRegex = /^STRAVA_ACCESS_TOKEN=.*/m;
-        const refreshTokenRegex = /^STRAVA_REFRESH_TOKEN=.*/m;
-        const expiresAtRegex = /^STRAVA_TOKEN_EXPIRES_AT=.*/m;
-
-        envContent = tokenRegex.test(envContent)
-            ? envContent.replace(tokenRegex, accessTokenLine)
-            : envContent + `\n${accessTokenLine}`;
-        envContent = refreshTokenRegex.test(envContent)
-            ? envContent.replace(refreshTokenRegex, refreshTokenLine)
-            : envContent + `\n${refreshTokenLine}`;
-        envContent = expiresAtRegex.test(envContent)
-            ? envContent.replace(expiresAtRegex, expiresAtLine)
-            : envContent + `\n${expiresAtLine}`;
-
-        fs.writeFileSync(envFilePath, envContent, 'utf8');
-        console.log('Tokens saved to .env');
-    } catch (error) {
-        console.error('Failed to save tokens:', error);
-    }
-}
-
-// Function to check if the token is expired (unchanged)
-function isTokenExpired() {
-    const expiresAt = process.env.STRAVA_TOKEN_EXPIRES_AT;
-    const currentTime = Math.floor(Date.now() / 1000);
-    return currentTime >= expiresAt;
-}
-
-// Function to refresh the access token (unchanged)
-async function refreshAccessToken() {
-    try {
-        const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
-        const response = await axios.post('https://www.strava.com/oauth/token', {
-            client_id: clientId,
-            client_secret: clientSecret,
-            grant_type: 'refresh_token',
-            refresh_token: refreshToken,
-        });
-        const { access_token, refresh_token, expires_at } = response.data;
-        saveTokens(access_token, refresh_token, expires_at);
-        return access_token;
-    } catch (error) {
-        console.error('Error refreshing access token:', error);
-        throw new Error('Error refreshing access token');
-    }
-}
-
-// Define a route for the root URL
-app.get('/', (req, res) => {
-    res.send('<h1>Welcome to Strava Gear Updater</h1><p><a href="/auth">Click here to authorize via Strava</a></p>');
-});
-
-// OAuth route (unchanged)
+// Authentication route
 app.get('/auth', (req, res) => {
     initiateOAuth(req, res);
 });
 
-// Handle the callback from Strava and get tokens
+// Token exchange route
 app.get('/exchange_token', async (req, res) => {
     const authCode = req.query.code;
     if (!authCode) {
@@ -84,13 +24,66 @@ app.get('/exchange_token', async (req, res) => {
     }
     try {
         const tokenData = await exchangeCodeForToken(authCode);
-        res.send(`OAuth successful! Access token: ${tokenData.access_token}`);
         accessToken = tokenData.access_token;
-        await processActivities(accessToken); // Call processActivities with the new token
+        const refreshToken = tokenData.refresh_token;
+        const envConfig = fs.readFileSync('.env', 'utf8').split('\n').filter(Boolean);
+        const newEnvConfig = envConfig.map(line => {
+            if (line.startsWith('STRAVA_ACCESS_TOKEN=')) {
+            return `STRAVA_ACCESS_TOKEN=${accessToken}`;
+            } else if (line.startsWith('STRAVA_REFRESH_TOKEN=')) {
+            return `STRAVA_REFRESH_TOKEN=${refreshToken}`;
+            }
+            return line;
+        });
+
+        if (!newEnvConfig.some(line => line.startsWith('STRAVA_ACCESS_TOKEN='))) {
+            newEnvConfig.push(`STRAVA_ACCESS_TOKEN=${accessToken}`);
+        }
+        if (!newEnvConfig.some(line => line.startsWith('STRAVA_REFRESH_TOKEN='))) {
+            newEnvConfig.push(`STRAVA_REFRESH_TOKEN=${refreshToken}`);
+        }
+
+        fs.writeFileSync('.env', newEnvConfig.join('\n'), { flag: 'w' });
+        res.send(`OAuth successful! Access token: ${accessToken}`);
     } catch (error) {
         res.status(500).send('Error exchanging code for token.');
     }
 });
+
+// Root URL route
+app.get('/', (req, res) => {
+    res.send('<h1>Welcome to Strava Gear Updater</h1><p><a href="/auth">Click here to authorize via Strava</a></p>');
+});
+
+// Check if token is expired
+function isTokenExpired() {
+    const tokenExpiry = process.env.STRAVA_REFRESH_TOKEN_EXPIRY;
+    return Date.now() > tokenExpiry;
+}
+
+// Refresh access token
+async function refreshAccessToken() {
+    const refreshToken = process.env.STRAVA_REFRESH_TOKEN;
+    const url = 'https://www.strava.com/oauth/token';
+    const params = {
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: refreshToken,
+        grant_type: 'refresh_token'
+    };
+    try {
+        const response = await axios.post(url, null, { params });
+        const tokenData = response.data;
+        const newAccessToken = tokenData.access_token;
+        const newRefreshToken = tokenData.refresh_token;
+        const newRefreshTokenExpiry = Date.now() + 6 * 30 * 24 * 60 * 60 * 1000; // Assuming 6 months expiry
+        saveTokens(newAccessToken, newRefreshToken, newRefreshTokenExpiry);
+        return newAccessToken;
+    } catch (error) {
+        console.error('Error refreshing access token:', error);
+        throw error;
+    }
+}
 
 // Start the server and handle routes
 const server = app.listen(port, async () => {
@@ -114,5 +107,4 @@ const server = app.listen(port, async () => {
     } else {
         console.log('No access token found, please authorize first via /auth');
     }
-
 });
