@@ -76,7 +76,7 @@ async function refreshAccessToken() {
         const tokenData = response.data;
         const newAccessToken = tokenData.access_token;
         const newRefreshToken = tokenData.refresh_token;
-        const newRefreshTokenExpiry = Date.now() + 6 * 30 * 24 * 60 * 60 * 1000; // Assuming 6 months expiry
+        const newRefreshTokenExpiry = tokenData.expires_at;
         saveTokens(newAccessToken, newRefreshToken, newRefreshTokenExpiry);
         return newAccessToken;
     } catch (error) {
