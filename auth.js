@@ -22,7 +22,7 @@ async function openUrl(url) {
 }
 
 // Function to save access token to .env file
-function saveTokens(accessToken, refreshToken) {
+function saveTokens(accessToken, refreshToken, newRefreshTokenExpiry) {
     const envFilePath = '.env';
     try {
         let envContent = '';
@@ -31,7 +31,7 @@ function saveTokens(accessToken, refreshToken) {
         }
         const accessTokenLine = `STRAVA_ACCESS_TOKEN=${accessToken}`;
         const refreshTokenLine = `STRAVA_REFRESH_TOKEN=${refreshToken}`;
-        const refreshTokenExpiryLine = `STRAVA_REFRESH_TOKEN_EXPIRY=${Date.now() + 6 * 30 * 24 * 60 * 60 * 1000}`; // Assuming 6 months expiry
+        const refreshTokenExpiryLine = `STRAVA_REFRESH_TOKEN_EXPIRY=${newRefreshTokenExpiry}`;
         const accessTokenRegex = /^STRAVA_ACCESS_TOKEN=.*/m;
         const refreshTokenRegex = /^STRAVA_REFRESH_TOKEN=.*/m;
         const refreshTokenExpiryRegex = /^STRAVA_REFRESH_TOKEN_EXPIRY=.*/m;
@@ -82,8 +82,8 @@ async function exchangeCodeForToken(authCode) {
             code: authCode,
             grant_type: 'authorization_code',
         });
-        const { access_token, refresh_token } = response.data;
-        saveTokens(access_token, refresh_token);  // Corrected function name
+        const { access_token, refresh_token,  expires_at} = response.data;
+        saveTokens(access_token, refresh_token, expires_at);  // Corrected function name
         return { access_token, refresh_token };
     } catch (error) {
         console.error('Error exchanging code for token:', error);

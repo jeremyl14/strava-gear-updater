@@ -110,23 +110,23 @@ async function processActivities(accessToken) {
             }
         }
         if (allCommuteFlagsTrue) {
-            console.log('All tests pass');
+            console.log('All tests pass, proceeding');
+
+            //update activities
+            for (const activity of activitiesToUpdate) {
+                const response = await axios.put(`https://www.strava.com/api/v3/activities/${activity.id}`, {
+                    gear_id: activity.gear_id,
+                    name: activity.name
+                }, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                    }
+                });
+                console.log('Activity updated:', response.data, activity.id);
+            }
         }
         else {
-            console.error('One or more tests failed');
-        }
-
-        //update activities
-        for (const activity of activitiesToUpdate) {
-            const response = await axios.put(`https://www.strava.com/api/v3/activities/${activity.id}`, {
-                gear_id: activity.gear_id,
-                name: activity.name
-            }, {
-                headers: {
-                    Authorization: `Bearer ${accessToken}`,
-                }
-            });
-            console.log('Activity updated:', response.data, activity.id);
+            console.error('One or more tests failed. No updates made.');
         }
 
     } catch (error) {
