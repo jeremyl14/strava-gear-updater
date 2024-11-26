@@ -5,7 +5,7 @@ const fs = require('fs');
 const { initiateOAuth, exchangeCodeForToken, saveTokens } = require('./auth');
 const { processActivities } = require('./activities');
 const app = express();
-const port = 3000;
+const port = 3005;
 
 let accessToken = process.env.STRAVA_ACCESS_TOKEN;
 const clientId = process.env.CLIENT_ID;
@@ -58,7 +58,8 @@ app.get('/', (req, res) => {
 // Check if token is expired
 function isTokenExpired() {
     const tokenExpiry = process.env.STRAVA_REFRESH_TOKEN_EXPIRY;
-    return Date.now() > tokenExpiry;
+    if (!tokenExpiry) return true;
+    return Date.now() / 1000 > Number(tokenExpiry);
 }
 
 // Refresh access token

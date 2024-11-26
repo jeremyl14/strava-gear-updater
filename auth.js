@@ -6,7 +6,7 @@ const path = require('path');
 
 const clientId = process.env.CLIENT_ID;
 const clientSecret = process.env.CLIENT_SECRET;
-const port = 3000;
+const port = 3005;
 const redirectUri = `http://localhost:${port}/exchange_token`;
 
 // Function to dynamically import 'open' module and open the URL

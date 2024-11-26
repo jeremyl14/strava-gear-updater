@@ -25,6 +25,10 @@ async function processActivities(accessToken) {
     try {
         // Get the latest 90 activities and filter for commute activities
         var commuteActivities = await getAthleteActivities(accessToken, null, null, 1, 200);
+        if (!commuteActivities || !Array.isArray(commuteActivities) || commuteActivities.length === 0) {
+            console.log('No activities fetched (token may be invalid or no activities found)');
+            return;
+        }
         console.log('newsest activity date:', commuteActivities[0].start_date);
         console.log('oldest activity date:', commuteActivities[commuteActivities.length - 1].start_date);
         commuteActivities = commuteActivities.filter(activity => activity.commute === true);
@@ -34,6 +38,7 @@ async function processActivities(accessToken) {
         const gearDetails = [];
         
         for (const gearId of gearIds) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
             const tempName = await getGearDetails(accessToken, gearId);
             gearDetails.push({
                 gearId: gearId,
